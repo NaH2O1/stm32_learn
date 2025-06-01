@@ -35,3 +35,5 @@
 .\objects\stm32f4xx_it.o: ..\FWLib\inc\stm32f4xx_dac.h
 .\objects\stm32f4xx_it.o: ..\FWLib\inc\stm32f4xx_dcmi.h
 .\objects\stm32f4xx_it.o: ..\FWLib\inc\stm32f4xx_fsmc.h
+.\objects\stm32f4xx_it.o: ..\Driver\LED\./led.h
+.\objects\stm32f4xx_it.o: ..\User\../Driver/EXIT/exti.h

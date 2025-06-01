@@ -38,6 +38,6 @@
 .\objects\main.o: ..\System\delay\delay.h
 .\objects\main.o: ..\System\usart\usart.h
 .\objects\main.o: D:\code\keil\core\ARM\ARMCC\Bin\..\include\stdio.h
-.\objects\main.o: ..\Driver\LED\led.h
-.\objects\main.o: ..\Driver\BEEP\beep.h
-.\objects\main.o: ..\Driver\KEY\key.h
+.\objects\main.o: ..\Driver\LED\./led.h
+.\objects\main.o: ..\Driver\BEEP\./beep.h
+.\objects\main.o: ..\User\../Driver/EXIT/exti.h

@@ -32,6 +32,9 @@
           },
           {
             "path": "../Driver/BEEP/beep.c"
+          },
+          {
+            "path": "../Driver/EXIT/exti.c"
           }
         ],
         "folders": []
@@ -332,7 +335,6 @@
       "custom_dep": {
         "name": "default",
         "incList": [
-          ".",
           "../FWLib/inc",
           "../Core",
           "../User",
@@ -344,11 +346,11 @@
           "../Driver/BEEP",
           "../Project/RTE/_Target 1"
         ],
-        "libList": [],
         "defineList": [
           "USE_STDPERIPH_DRIVER",
           "STM32F40_41xxx"
-        ]
+        ],
+        "libList": []
       },
       "builderOptions": {
         "AC5": {

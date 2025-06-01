@@ -1,5 +1,5 @@
 .\objects\key.o: ..\Driver\KEY\key.c
-.\objects\key.o: ..\Driver\KEY\key.h
+.\objects\key.o: ..\Driver\KEY\./key.h
 .\objects\key.o: ..\User\stm32f4xx.h
 .\objects\key.o: ..\Core\core_cm4.h
 .\objects\key.o: D:\code\keil\core\ARM\ARMCC\Bin\..\include\stdint.h

@@ -408,6 +408,11 @@
               <FileType>1</FileType>
               <FilePath>..\Driver\BEEP\beep.c</FilePath>
             </File>
+            <File>
+              <FileName>exti.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\EXIT\exti.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
