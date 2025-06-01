@@ -335,6 +335,7 @@
       "custom_dep": {
         "name": "default",
         "incList": [
+          ".",
           "../FWLib/inc",
           "../Core",
           "../User",
