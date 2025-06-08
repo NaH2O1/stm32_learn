@@ -10,6 +10,10 @@ start_point_r = [0, 0]  # 右边起点的x，y值
 image_h = 512  # 图像高度
 image_w = 320  # 图像宽度
 
+#颜色阈值HSV
+colorLow = np.array([0, 0, 200])
+colorHigh = np.array([180, 30, 255])
+
 # 边界跟踪算法实现
 # 全局变量
 points_l = []     # 左边界的点
@@ -234,8 +238,7 @@ else:
         # 预处理：高斯模糊和颜色过滤
         frame_copy_BGR = cv2.GaussianBlur(frame_copy, (7, 7), 0)
         hsv = cv2.cvtColor( frame_copy_BGR, cv2.COLOR_BGR2HSV)
-        colorLow = np.array([0, 0, 200])
-        colorHigh = np.array([180, 30, 255])
+
         mask = cv2.inRange(hsv, colorLow, colorHigh)
 
         # 形态学操作优化掩膜
