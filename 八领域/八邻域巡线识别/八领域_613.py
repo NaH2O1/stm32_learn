@@ -1,18 +1,18 @@
 import cv2
 import numpy as np
+import math
 
 # 全局变量
+prev_angle = None  # 跟踪上一帧的角度
+visible_range = 100  # 只显示底部100像素的中线
 start_point_l = [0, 0]  # 左边起点的x，y值
 start_point_r = [0, 0]  # 右边起点的x，y值
-
+initial_ideal_midline_x = None  # 初始理想中线点
+is_initial_ideal_midline_set = False  # 标志位，表示是否已经设置初始理想中线点
 
 # 定义图像大小
 image_h = 512  # 图像高度
 image_w = 320  # 图像宽度
-
-#颜色阈值HSV
-colorLow = np.array([0, 0, 200])
-colorHigh = np.array([180, 30, 255])
 
 # 边界跟踪算法实现
 # 全局变量
@@ -23,8 +23,6 @@ dir_r = []        # 右边界的生长方向
 data_stastics_l = 0  # 左边界的点数统计
 data_stastics_r = 0  # 右边界的点数统计
 hightest = 0        # 最高点
-start_point_l = [0, 0]  # 左边起点的x，y值
-start_point_r = [0, 0]  # 右边起点的x，y值
 border_min = 0
 border_max = image_w - 1
 
@@ -197,22 +195,59 @@ def get_right(total_R):
 
     return r_border
 
-# 计算中间线
-def get_center_line(left_border, right_border):
+def calculate_midline_offset(l_border, r_border):
     """
-    计算中间线
-    :param left_border: 左边界数组
-    :param right_border: 右边界数组
-    :return: 中间线数组
+    计算理想中线、偏移量、引导线长度和偏差角度
+    :param l_border: 左边界数组
+    :param r_border: 右边界数组
+    :return: 偏移量、引导线长度、偏差角度、中线数组
     """
-    center_line = []
+    # 计算理想中线
+    midline = [0] * image_h
+
     for y in range(image_h):
-        if left_border[y] != border_min and right_border[y] != border_max:
-            center_x = (left_border[y] + right_border[y]) // 2
-            center_line.append((center_x, y))
+        if l_border[y] != 0 and r_border[y] != image_w - 1:
+            midline[y] = (l_border[y] + r_border[y]) // 2
         else:
-            center_line.append(None)  # 如果左右边界中有一个不存在，则中间线也不存在
-    return center_line
+            # 如果边界不完整，使用线性插值或默认值
+            if y > 0 and midline[y-1] != 0:
+                midline[y] = midline[y-1]
+            else:
+                midline[y] = image_w // 2
+
+    # 获取引导线终点（底部可见区域的中点）
+    bottom_y = image_h - 1
+    bottom_mid_x = midline[bottom_y]
+
+    global initial_ideal_midline_x, is_initial_ideal_midline_set
+
+    # 设置初始理想中线的底部点（仅在第一次有效检测时）
+    if not is_initial_ideal_midline_set:
+        initial_ideal_midline_x = bottom_mid_x
+        is_initial_ideal_midline_set = True
+        print(f"Initial ideal midline point set to: {initial_ideal_midline_x}")
+
+    # 确保 initial_ideal_midline_x 是整数
+    if initial_ideal_midline_x is None:
+        initial_ideal_midline_x = image_w // 2  # 默认值
+
+    # 计算偏移量、引导线长度和偏差角度
+    offset = bottom_mid_x - initial_ideal_midline_x
+
+    # 计算引导线长度（从底部到顶部的中线长度）
+    top_y = max(0, image_h - visible_range)
+    top_mid_x = midline[top_y]
+
+    midline_length = math.sqrt((bottom_mid_x - top_mid_x) ** 2 + (bottom_y - top_y) ** 2)
+
+    # 避免除以零的情况
+    if midline_length == 0:
+        midline_length = 1e-6  # 添加一个小的值防止除以零
+
+    # 计算偏差角度（使用反正切函数）
+    angle_to_mid_radian = math.atan2(offset, midline_length)
+
+    return offset, midline_length, angle_to_mid_radian, midline
 
 
 # 初始化摄像头
@@ -237,8 +272,10 @@ else:
 
         # 预处理：高斯模糊和颜色过滤
         frame_copy_BGR = cv2.GaussianBlur(frame_copy, (7, 7), 0)
-        hsv = cv2.cvtColor( frame_copy_BGR, cv2.COLOR_BGR2HSV)
-
+        hsv = cv2.cvtColor(frame_copy_BGR, cv2.COLOR_BGR2HSV)
+        # 定义黑色的HSV范围
+        colorLow = np.array([0, 0, 0])
+        colorHigh = np.array([180, 240, 46])
         mask = cv2.inRange(hsv, colorLow, colorHigh)
 
         # 形态学操作优化掩膜
@@ -271,34 +308,59 @@ else:
                 # 提取左右边界
                 l_border = get_left(total_L)
                 r_border = get_right(total_R)
-                # 计算中间线
-                center_line = get_center_line(l_border, r_border)
-
+                
                 # 创建一个彩色图像用于绘制边界
                 result_image = cv2.cvtColor(largest_mask, cv2.COLOR_GRAY2BGR)
-
-                for y in range(image_h):
-                    if l_border[y] != border_min:
-                    # 绘制左边界点，使用绿色
-                        cv2.circle(result_image, (l_border[y], y), 1, (0, 255, 0), -1)
-
-                    if r_border[y] != border_max:
-                    # 绘制右边界点，使用红色
-                        cv2.circle(result_image, (r_border[y], y), 1, (0, 0, 255), -1)
                 
-                    if center_line[y] is not None:
-                        # 绘制中间线点，使用蓝色
-                        cv2.circle(result_image, center_line[y], 1, (255, 0, 0), -1)
+                # 新增功能：计算引导线相关信息
+                if l_border and r_border:
+                    offset, midline_length, angle_to_mid_radian, midline = calculate_midline_offset(l_border, r_border)
+                    
+                    # 创建一个彩色图像用于绘制边界和中线
+                    result_image = cv2.cvtColor(largest_mask, cv2.COLOR_GRAY2BGR)
+
+                    # 只显示底部visible_range像素的边界和中线
+                    for y in range(max(0, image_h - visible_range), image_h):
+                        if l_border[y] != 0:
+                            cv2.circle(result_image, (l_border[y], y), 1, (0, 255, 0), -1)  # 绿色左边界
+                        if r_border[y] != image_w - 1:
+                            cv2.circle(result_image, (r_border[y], y), 1, (0, 0, 255), -1)  # 红色右边界
+                        if midline[y] != 0:
+                            cv2.circle(result_image, (midline[y], y), 1, (255, 0, 0), -1)  # 蓝色中线
+
+                    # 获取引导线终点（底部可见区域的中点）
+                    bottom_y = image_h - 1
+                    bottom_mid_x = midline[bottom_y]
+                    top_y = max(0, image_h - visible_range)
+                    top_mid_x = midline[top_y]
+
+                    # 计算箭头的终点坐标（朝向引导线的顶部方向）
+                    arrow_length = 30
+                    arrow_x = int(bottom_mid_x + arrow_length * math.cos(angle_to_mid_radian))
+                    arrow_y = int(bottom_mid_x + arrow_length * math.sin(angle_to_mid_radian))
+
+                    # 绘制偏差角度的指示线
+                    cv2.line(result_image, (int(bottom_mid_x), bottom_y), (arrow_x, arrow_y), (255, 0, 255), 2)
+                    cv2.circle(result_image, (arrow_x, arrow_y), 3, (255, 0, 255), -1)  # 绘制箭头终点
+
+                    # 显示计算结果
+                    cv2.putText(result_image, f'Offset: {offset:.2f}px', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                    cv2.putText(result_image, f'Length: {midline_length:.2f}px', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                    cv2.putText(result_image, f'Angle: {math.degrees(angle_to_mid_radian):.2f}°', (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
                     # 显示结果
                     cv2.imshow('Boundary Detection', result_image)
-        
+
+                    # 打印结果到控制台
+                    print(f"Offset: {offset:.2f}px, Length: {midline_length:.2f}px, Angle: {math.degrees(angle_to_mid_radian):.2f}°")
 
 
-        # 按'q'键退出
+                # 显示结果
+                cv2.imshow('Boundary Detection', result_image)
+
+                # 按'q'键退出
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    cap.release()
-    cv2.destroyAllWindows()
-
+cap.release()
+cv2.destroyAllWindows()
